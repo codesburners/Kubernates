@@ -1,0 +1,21 @@
+pipeline {
+    agent any
+    stages {
+        stage('Verify Java Environment') {
+            steps {
+                bat 'java -version'
+            }
+        }
+        stage('Execute Java Addition Program') {
+            steps {
+                bat '''
+                if exist Addition.java (
+                    java -cp . Addition.java 100 250
+                ) else (
+                    java -cp "C:\\Users\\gowth\\Desktop\\Kubernates" "C:\\Users\\gowth\\Desktop\\Kubernates\\Addition.java" 100 250
+                )
+                '''
+            }
+        }
+    }
+}
