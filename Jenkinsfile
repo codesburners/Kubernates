@@ -1,84 +1,67 @@
 pipeline {
     agent any
     environment {
-        APP_IMAGE = 'devops-lab'
+        APP_IMAGE = 'java-addition-app'
     }
     stages {
-        stage('Checkout Source Code') {
+        stage('1. Test Java Logic') {
             steps {
-                script {
-                    try {
-                        checkout scm
-                    } catch (Exception e) {
-                        echo "Standalone Pipeline mode: using local workspace files."
-                    }
-                }
-            }
-        }
-        stage('Validate Manifests & Tools') {
-            steps {
-                bat 'kubectl version --client'
-                bat 'docker --version'
+                echo 'Testing Java Addition logic...'
                 bat '''
-                if exist k8s\\image-deployment.yaml (
-                    kubectl apply --dry-run=client -f k8s\\image-deployment.yaml
-                    kubectl apply --dry-run=client -f k8s\\service-custom.yaml
+                if exist Addition.java (
+                    java -cp . Addition.java 25 35
                 ) else (
-                    kubectl apply --dry-run=client -f "C:\\Users\\gowth\\Desktop\\Kubernates\\k8s\\image-deployment.yaml"
-                    kubectl apply --dry-run=client -f "C:\\Users\\gowth\\Desktop\\Kubernates\\k8s\\service-custom.yaml"
+                    java -cp "C:\\Users\\gowth\\Desktop\\Kubernates" "C:\\Users\\gowth\\Desktop\\Kubernates\\Addition.java" 25 35
                 )
                 '''
             }
         }
-        stage('Build Docker Image') {
+        stage('2. Build Docker Container') {
             steps {
+                echo 'Building Java Docker image...'
                 bat '''
-                if exist app\\Dockerfile (
-                    docker build -t %APP_IMAGE%:%BUILD_NUMBER% -t %APP_IMAGE%:latest app
+                if exist Dockerfile.java (
+                    docker build -f Dockerfile.java -t %APP_IMAGE%:%BUILD_NUMBER% -t %APP_IMAGE%:latest .
                 ) else (
-                    docker build -t %APP_IMAGE%:%BUILD_NUMBER% -t %APP_IMAGE%:latest "C:\\Users\\gowth\\Desktop\\Kubernates\\app"
+                    docker build -f "C:\\Users\\gowth\\Desktop\\Kubernates\\Dockerfile.java" -t %APP_IMAGE%:%BUILD_NUMBER% -t %APP_IMAGE%:latest "C:\\Users\\gowth\\Desktop\\Kubernates"
                 )
                 '''
             }
         }
-        stage('Test Docker Image') {
+        stage('3. Deploy to Kubernetes') {
             steps {
-                echo "Testing built container image metadata..."
-                bat 'docker image inspect %APP_IMAGE%:%BUILD_NUMBER%'
-            }
-        }
-        stage('Deploy to Kubernetes') {
-            steps {
+                echo 'Deploying Java Microservice to Kubernetes...'
                 bat '''
-                if exist k8s\\image-deployment.yaml (
-                    kubectl apply -f k8s\\image-deployment.yaml
-                    kubectl apply -f k8s\\service-custom.yaml
+                if exist k8s\\java-addition-deployment.yaml (
+                    kubectl apply -f k8s\\java-addition-deployment.yaml
                 ) else (
-                    kubectl apply -f "C:\\Users\\gowth\\Desktop\\Kubernates\\k8s\\image-deployment.yaml"
-                    kubectl apply -f "C:\\Users\\gowth\\Desktop\\Kubernates\\k8s\\service-custom.yaml"
+                    kubectl apply -f "C:\\Users\\gowth\\Desktop\\Kubernates\\k8s\\java-addition-deployment.yaml"
                 )
                 '''
-                bat 'kubectl set image deployment/custom-web web=%APP_IMAGE%:%BUILD_NUMBER%'
-                bat 'kubectl rollout status deployment/custom-web --timeout=180s'
+                bat 'kubectl set image deployment/java-addition java-app=%APP_IMAGE%:%BUILD_NUMBER%'
+                bat 'kubectl rollout status deployment/java-addition --timeout=180s'
             }
         }
-        stage('Verify Application Live') {
+        stage('4. Verify Pods & Service') {
             steps {
-                bat 'kubectl get deployment custom-web'
-                bat 'kubectl get pods -l app=custom-web'
-                bat 'kubectl get svc custom-web-service'
+                bat 'kubectl get deployment java-addition -o wide'
+                bat 'kubectl get pods -l app=java-addition'
+                bat 'kubectl get svc java-addition-service'
+            }
+        }
+        stage('5. Test Live Java Microservice') {
+            steps {
+                echo 'Testing calculation endpoint inside Kubernetes cluster...'
+                bat 'kubectl exec deployment/java-addition -- wget -qO- "http://localhost:8080/?a=45&b=55"'
             }
         }
     }
     post {
         success {
-            echo "=========================================================="
-            echo "SUCCESS: Complete CI/CD Pipeline Executed Successfully!"
-            echo "Web app is running on NodePort 30009: http://localhost:30009"
-            echo "=========================================================="
-        }
-        failure {
-            echo "ERROR: Pipeline failed. Inspect console logs above."
+            echo "=========================================================================="
+            echo "SUCCESS: Java Addition Microservice Built & Deployed to Kubernetes!"
+            echo "Access via NodePort: 30010 or port-forward: 8083 -> 8080"
+            echo "=========================================================================="
         }
     }
 }
