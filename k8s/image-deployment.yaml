@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: custom-web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: custom-web
+  template:
+    metadata:
+      labels:
+        app: custom-web
+    spec:
+      containers:
+        - name: web
+          image: devops-lab:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80

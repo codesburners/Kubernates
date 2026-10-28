@@ -1,0 +1,13 @@
+# OS and Editor
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+*.swp
+*~
+.vscode/
+.idea/
+
+# Node / Build artifacts
+*.log
+sample.yaml
